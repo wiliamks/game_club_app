@@ -1,0 +1,77 @@
+# Dependencies
+**/node_modules/
+**/jspm_packages/
+**/web_modules/
+**/bower_components/
+
+# Build Output
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+**/.output/
+**/.svelte-kit/
+**/.vitepress/dist/
+**/.docusaurus/
+**/out/
+
+# IDE & OS
+**/.DS_Store
+**/.vscode/
+**/.idea/
+**/.tern-port
+**/.vscode-test
+**/.eslintcache
+**/.stylelintcache
+
+# Environment & Sensitive
+.env
+.env.*
+!.env.example
+
+# Logs & Debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.node_repl_history
+
+# Go / Backend
+**/server
+**/gamer_club.db
+**/gamer_club.db*
+**/data/
+coverage.*
+*.coverprofile
+profile.cov
+go.work
+go.work.sum
+go.sum
+
+# Coverage & Cache
+coverage
+.nyc_output
+.grunt
+.cache
+.parcel-cache
+.temp
+**/.vitepress/cache
+.serverless/
+.fusebox/
+.dynamodb/
+.firebase/
+.pnpm-store
+.yarn/
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.yarn-integrity
+
+# Vite
+.vite/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+*.tsbuildinfo
