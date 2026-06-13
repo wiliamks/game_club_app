@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { 
   Star, 
-  Clock, 
   Award, 
   MessageSquare, 
   ChevronRight, 
@@ -28,6 +27,9 @@ interface Game {
   last_active_date: string | null;
   is_active: boolean;
   average_score: number;
+  time_to_beat_normal: string;
+  time_to_beat_hastily: string;
+  time_to_beat_completely: string;
 }
 
 interface Review {
@@ -507,13 +509,46 @@ export const GamesView: React.FC = () => {
                 <h1 className="text-3xl font-black tracking-tight leading-tight">{details.game.name}</h1>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">{details.game.summary}</p>
                 
-                <div className="flex items-center space-x-6 text-xs text-slate-400 font-bold pt-1">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span>{t('games.timeToBeat')}: <strong className="text-indigo-600 dark:text-indigo-400">{details.game.time_to_beat || 'N/A'}</strong></span>
-                  </div>
+                {/* Metadata Row: Release Date + Averages on the same line */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 font-bold pt-1">
                   {details.game.release_date && (
-                    <span>{t('games.released')}: <strong className="text-slate-600 dark:text-slate-300">{new Date(details.game.release_date).toLocaleDateString()}</strong></span>
+                    <span>
+                      {t('games.released')}: <strong className="text-slate-600 dark:text-slate-300">{new Date(details.game.release_date).toLocaleDateString()}</strong>
+                    </span>
+                  )}
+
+                  {(details.game.time_to_beat_hastily || details.game.time_to_beat_normal || details.game.time_to_beat_completely) && (
+                    <div className="flex items-center space-x-1 text-slate-500 dark:text-slate-400 flex-wrap">
+                      {details.game.release_date && <span className="text-slate-300 dark:text-slate-700 mr-2">•</span>}
+                      {(() => {
+                        const formatHours = (val: string) => {
+                          if (!val) return '';
+                          const num = val.replace(' hours', '').trim();
+                          return t('games.hours', { count: num });
+                        };
+
+                        return (
+                          <>
+                            <span className="flex items-center">
+                              <span className="mr-1.5">🕒</span>
+                              {t('games.timeToBeat')}: <strong className="text-indigo-600 dark:text-indigo-400 ml-1">{formatHours(details.game.time_to_beat_hastily || details.game.time_to_beat)}</strong>
+                            </span>
+                            {details.game.time_to_beat_normal && (
+                              <span className="flex items-center">
+                                <span className="mx-1.5 text-slate-300 dark:text-slate-700">|</span>
+                                {t('games.mainSides')}: <strong className="text-indigo-600 dark:text-indigo-400 ml-1">{formatHours(details.game.time_to_beat_normal)}</strong>
+                              </span>
+                            )}
+                            {details.game.time_to_beat_completely && (
+                              <span className="flex items-center">
+                                <span className="mx-1.5 text-slate-300 dark:text-slate-700">|</span>
+                                {t('games.completionist')}: <strong className="text-indigo-600 dark:text-indigo-400 ml-1">{formatHours(details.game.time_to_beat_completely)}</strong>
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   )}
                 </div>
               </div>

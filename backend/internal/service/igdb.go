@@ -75,7 +75,7 @@ type igdbGame struct {
 // Helper to calculate deterministic time to beat based on game ID
 func calculateTimeToBeat(id int) string {
 	hours := (id % 45) + 10 // between 10 and 54 hours
-	return fmt.Sprintf("%d hours", hours)
+	return fmt.Sprintf("%d", hours)
 }
 
 func (c *igdbClient) getAccessToken() (string, error) {
@@ -265,6 +265,7 @@ func (c *igdbClient) GetGameDetails(id int) (*models.Game, error) {
 
 	// 2. Fetch Time to Beat details from `/game_time_to_beats`
 	timeToBeat := calculateTimeToBeat(rg.ID) // Default fallback
+	var ttbNormal, ttbHastily, ttbCompletely string
 
 	timeToBeatBody := fmt.Sprintf(`fields completely, normally, hastily, game_id; where game_id = %d;`, rg.ID)
 	reqTTB, err := http.NewRequest("POST", c.apiURL+"/game_time_to_beats", bytes.NewBufferString(timeToBeatBody))
@@ -295,20 +296,39 @@ func (c *igdbClient) GetGameDetails(id int) (*models.Game, error) {
 				if seconds > 0 {
 					hours := seconds / 3600
 					if hours > 0 {
-						timeToBeat = fmt.Sprintf("%d hours", hours)
+						timeToBeat = fmt.Sprintf("%d", hours)
 					}
+				}
+
+				// Map individual playstyles
+				if ttb.Normally > 0 {
+					ttbNormal = fmt.Sprintf("%d", ttb.Normally/3600)
+				}
+				if ttb.Hastily > 0 {
+					ttbHastily = fmt.Sprintf("%d", ttb.Hastily/3600)
+				}
+				if ttb.Completely > 0 {
+					ttbCompletely = fmt.Sprintf("%d", ttb.Completely/3600)
 				}
 			}
 		}
 	}
 
+	// Default fallback value if no database record existed
+	if ttbNormal == "" {
+		ttbNormal = timeToBeat
+	}
+
 	return &models.Game{
-		ID:          rg.ID,
-		Name:        rg.Name,
-		Summary:     rg.Summary,
-		CoverURL:    cover,
-		ReleaseDate: relDate,
-		TimeToBeat:  timeToBeat,
+		ID:                   rg.ID,
+		Name:                 rg.Name,
+		Summary:              rg.Summary,
+		CoverURL:             cover,
+		ReleaseDate:          relDate,
+		TimeToBeat:           timeToBeat,
+		TimeToBeatNormal:     ttbNormal,
+		TimeToBeatHastily:    ttbHastily,
+		TimeToBeatCompletely: ttbCompletely,
 	}, nil
 }
 

@@ -87,7 +87,16 @@ func TestIGDBClientHttp(t *testing.T) {
 	if game.ID != 101 {
 		t.Errorf("expected ID 101, got %d", game.ID)
 	}
-	if game.TimeToBeat != "30 hours" {
-		t.Errorf("expected TimeToBeat '30 hours', got '%s'", game.TimeToBeat)
+	if game.TimeToBeat != "30" {
+		t.Errorf("expected TimeToBeat '30', got '%s'", game.TimeToBeat)
+	}
+	if game.TimeToBeatNormal != "30" {
+		t.Errorf("expected TimeToBeatNormal '30', got '%s'", game.TimeToBeatNormal)
+	}
+	if game.TimeToBeatHastily != "20" {
+		t.Errorf("expected TimeToBeatHastily '20', got '%s'", game.TimeToBeatHastily)
+	}
+	if game.TimeToBeatCompletely != "40" {
+		t.Errorf("expected TimeToBeatCompletely '40', got '%s'", game.TimeToBeatCompletely)
 	}
 }

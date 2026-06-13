@@ -46,6 +46,9 @@ func InitDB() (*sql.DB, error) {
 	_, _ = db.Exec("ALTER TABLE reviews ADD COLUMN title TEXT NOT NULL DEFAULT '';")
 	_, _ = db.Exec("ALTER TABLE reviews ADD COLUMN avatar_url TEXT NOT NULL DEFAULT '';")
 	_, _ = db.Exec("ALTER TABLE users ADD COLUMN avatar_url TEXT;")
+	_, _ = db.Exec("ALTER TABLE games ADD COLUMN time_to_beat_normal TEXT DEFAULT '';")
+	_, _ = db.Exec("ALTER TABLE games ADD COLUMN time_to_beat_hastily TEXT DEFAULT '';")
+	_, _ = db.Exec("ALTER TABLE games ADD COLUMN time_to_beat_completely TEXT DEFAULT '';")
 
 	// Seed default admin user if database is empty
 	if err := seedDefaultAdmin(db); err != nil {
@@ -73,7 +76,10 @@ func createTables(db *sql.DB) error {
 			release_date DATETIME,
 			time_to_beat TEXT,
 			last_active_date DATETIME,
-			is_active BOOLEAN NOT NULL DEFAULT 0
+			is_active BOOLEAN NOT NULL DEFAULT 0,
+			time_to_beat_normal TEXT DEFAULT '',
+			time_to_beat_hastily TEXT DEFAULT '',
+			time_to_beat_completely TEXT DEFAULT ''
 		);`,
 
 		`CREATE TABLE IF NOT EXISTS reviews (

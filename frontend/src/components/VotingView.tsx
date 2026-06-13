@@ -36,6 +36,7 @@ interface IGDBGame {
   summary: string;
   cover_url: string;
   time_to_beat: string;
+  release_date: string | null;
 }
 
 interface CandidateResult {
@@ -625,6 +626,11 @@ export const VotingView: React.FC = () => {
                       />
                       <div className="flex-1 min-w-0">
                         <h4 className="text-base font-bold truncate text-slate-900 dark:text-white">{game.name}</h4>
+                        {game.release_date && (
+                          <span className="text-[10px] text-slate-400 font-bold block mt-1 uppercase">
+                            {t('games.released')}: {new Date(game.release_date).toLocaleDateString()}
+                          </span>
+                        )}
                         <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">{game.summary || 'No summary available.'}</p>
                       </div>
                       <button

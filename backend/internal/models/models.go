@@ -28,15 +28,18 @@ type CreateUserDTO struct {
 
 // Game represents a game stored in our system
 type Game struct {
-	ID             int        `json:"id"` // IGDB ID
-	Name           string     `json:"name"`
-	Summary        string     `json:"summary"`
-	CoverURL       string     `json:"cover_url"`
-	ReleaseDate    *time.Time `json:"release_date"`
-	TimeToBeat     string     `json:"time_to_beat"` // e.g. "15 hours" or calculated description
-	LastActiveDate *time.Time `json:"last_active_date"`
-	IsActive       bool       `json:"is_active"`
-	AverageScore   float64    `json:"average_score"`
+	ID                   int        `json:"id"` // IGDB ID
+	Name                 string     `json:"name"`
+	Summary              string     `json:"summary"`
+	CoverURL             string     `json:"cover_url"`
+	ReleaseDate          *time.Time `json:"release_date"`
+	TimeToBeat           string     `json:"time_to_beat"` // e.g. "15 hours" or calculated description
+	LastActiveDate       *time.Time `json:"last_active_date"`
+	IsActive             bool       `json:"is_active"`
+	AverageScore         float64    `json:"average_score"`
+	TimeToBeatNormal     string     `json:"time_to_beat_normal"`
+	TimeToBeatHastily    string     `json:"time_to_beat_hastily"`
+	TimeToBeatCompletely string     `json:"time_to_beat_completely"`
 }
 
 // Review represents a user review of a game

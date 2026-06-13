@@ -34,14 +34,17 @@ func NewGameRepository(db *sql.DB) GameRepository {
 }
 
 func (r *gameRepository) SaveGame(g *models.Game) error {
-	query := `INSERT INTO games (id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	query := `INSERT INTO games (id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active, time_to_beat_normal, time_to_beat_hastily, time_to_beat_completely)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			name = excluded.name,
 			summary = excluded.summary,
 			cover_url = excluded.cover_url,
 			release_date = excluded.release_date,
-			time_to_beat = excluded.time_to_beat;`
+			time_to_beat = excluded.time_to_beat,
+			time_to_beat_normal = excluded.time_to_beat_normal,
+			time_to_beat_hastily = excluded.time_to_beat_hastily,
+			time_to_beat_completely = excluded.time_to_beat_completely;`
 
 	var relDate interface{}
 	if g.ReleaseDate != nil {
@@ -53,7 +56,7 @@ func (r *gameRepository) SaveGame(g *models.Game) error {
 		lastActive = g.LastActiveDate.Format(time.RFC3339)
 	}
 
-	_, err := r.db.Exec(query, g.ID, g.Name, g.Summary, g.CoverURL, relDate, g.TimeToBeat, lastActive, g.IsActive)
+	_, err := r.db.Exec(query, g.ID, g.Name, g.Summary, g.CoverURL, relDate, g.TimeToBeat, lastActive, g.IsActive, g.TimeToBeatNormal, g.TimeToBeatHastily, g.TimeToBeatCompletely)
 	if err != nil {
 		return fmt.Errorf("failed to save game: %w", err)
 	}
@@ -61,12 +64,12 @@ func (r *gameRepository) SaveGame(g *models.Game) error {
 }
 
 func (r *gameRepository) GetGameByID(id int) (*models.Game, error) {
-	query := "SELECT id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active FROM games WHERE id = ?"
+	query := "SELECT id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active, COALESCE(time_to_beat_normal, ''), COALESCE(time_to_beat_hastily, ''), COALESCE(time_to_beat_completely, '') FROM games WHERE id = ?"
 	row := r.db.QueryRow(query, id)
 
 	g := &models.Game{}
 	var relDateStr, lastActiveStr sql.NullString
-	err := row.Scan(&g.ID, &g.Name, &g.Summary, &g.CoverURL, &relDateStr, &g.TimeToBeat, &lastActiveStr, &g.IsActive)
+	err := row.Scan(&g.ID, &g.Name, &g.Summary, &g.CoverURL, &relDateStr, &g.TimeToBeat, &lastActiveStr, &g.IsActive, &g.TimeToBeatNormal, &g.TimeToBeatHastily, &g.TimeToBeatCompletely)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -92,7 +95,7 @@ func (r *gameRepository) GetGameByID(id int) (*models.Game, error) {
 }
 
 func (r *gameRepository) GetAllGames() ([]*models.Game, error) {
-	query := "SELECT id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active FROM games"
+	query := "SELECT id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active, COALESCE(time_to_beat_normal, ''), COALESCE(time_to_beat_hastily, ''), COALESCE(time_to_beat_completely, '') FROM games"
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query games: %w", err)
@@ -103,7 +106,7 @@ func (r *gameRepository) GetAllGames() ([]*models.Game, error) {
 	for rows.Next() {
 		g := &models.Game{}
 		var relDateStr, lastActiveStr sql.NullString
-		err := rows.Scan(&g.ID, &g.Name, &g.Summary, &g.CoverURL, &relDateStr, &g.TimeToBeat, &lastActiveStr, &g.IsActive)
+		err := rows.Scan(&g.ID, &g.Name, &g.Summary, &g.CoverURL, &relDateStr, &g.TimeToBeat, &lastActiveStr, &g.IsActive, &g.TimeToBeatNormal, &g.TimeToBeatHastily, &g.TimeToBeatCompletely)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan game row: %w", err)
 		}
@@ -128,12 +131,12 @@ func (r *gameRepository) GetAllGames() ([]*models.Game, error) {
 }
 
 func (r *gameRepository) GetActiveGame() (*models.Game, error) {
-	query := "SELECT id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active FROM games WHERE is_active = 1 LIMIT 1"
+	query := "SELECT id, name, summary, cover_url, release_date, time_to_beat, last_active_date, is_active, COALESCE(time_to_beat_normal, ''), COALESCE(time_to_beat_hastily, ''), COALESCE(time_to_beat_completely, '') FROM games WHERE is_active = 1 LIMIT 1"
 	row := r.db.QueryRow(query)
 
 	g := &models.Game{}
 	var relDateStr, lastActiveStr sql.NullString
-	err := row.Scan(&g.ID, &g.Name, &g.Summary, &g.CoverURL, &relDateStr, &g.TimeToBeat, &lastActiveStr, &g.IsActive)
+	err := row.Scan(&g.ID, &g.Name, &g.Summary, &g.CoverURL, &relDateStr, &g.TimeToBeat, &lastActiveStr, &g.IsActive, &g.TimeToBeatNormal, &g.TimeToBeatHastily, &g.TimeToBeatCompletely)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
