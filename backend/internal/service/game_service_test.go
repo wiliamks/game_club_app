@@ -102,6 +102,14 @@ func (m *mockGameRepository) DeleteGame(id int) error {
 	return nil
 }
 
+func (m *mockGameRepository) ToggleReaction(reviewID, userID int, emoji string) error {
+	return nil
+}
+
+func (m *mockGameRepository) GetReactionsForGame(gameID, userID int) (map[int][]*models.EmojiReactionSummary, error) {
+	return make(map[int][]*models.EmojiReactionSummary), nil
+}
+
 // mockIGDBClient implements service.IGDBClient
 type mockIGDBClient struct {
 	games map[int]*models.Game
@@ -135,7 +143,7 @@ func TestGameService(t *testing.T) {
 	igdb.games[777] = igdbGame
 
 	// Test GetGameDetails for un-cached game (triggers IGDB fetch + save)
-	details, err := s.GetGameDetails(777)
+	details, err := s.GetGameDetails(777, 10)
 	if err != nil {
 		t.Fatalf("failed to get game details: %v", err)
 	}
@@ -174,7 +182,7 @@ func TestGameService(t *testing.T) {
 	}
 
 	// Fetch game details again (with reviews now in local DB)
-	details, err = s.GetGameDetails(777)
+	details, err = s.GetGameDetails(777, 10)
 	if err != nil {
 		t.Fatalf("failed to get game details: %v", err)
 	}

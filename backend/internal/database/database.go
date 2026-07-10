@@ -124,6 +124,12 @@ func createTables(db *sql.DB) error {
 			preference TEXT NOT NULL, -- JSON array of GameIDs, e.g. "[123, 456]"
 			UNIQUE(session_id, user_id)
 		);`,
+		`CREATE TABLE IF NOT EXISTS review_reactions (
+			review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			emoji TEXT NOT NULL,
+			PRIMARY KEY (review_id, user_id, emoji)
+		);`,
 	}
 
 	for _, q := range queries {

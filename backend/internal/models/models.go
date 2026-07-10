@@ -57,6 +57,15 @@ type Review struct {
 	Fun        int       `json:"fun"`        // 0-5
 	Comment    string    `json:"comment"`
 	CreatedAt  time.Time `json:"created_at"`
+	Reactions  []*EmojiReactionSummary `json:"reactions"`
+}
+
+// EmojiReactionSummary represents the aggregate reactions for a review
+type EmojiReactionSummary struct {
+	Emoji       string   `json:"emoji"`
+	Count       int      `json:"count"`
+	UserReacted bool     `json:"user_reacted"`
+	Usernames   []string `json:"usernames"`
 }
 
 // ReviewAverages represents the average scores of reviews for a game, excluding 0s

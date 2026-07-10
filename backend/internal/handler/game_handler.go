@@ -58,7 +58,13 @@ func (h *GameHandler) GetGameDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	details, err := h.gameService.GetGameDetails(id)
+	user := middleware.GetUserFromContext(r.Context())
+	userID := 0
+	if user != nil {
+		userID = user.ID
+	}
+
+	details, err := h.gameService.GetGameDetails(id, userID)
 	if err != nil {
 		RespondError(w, http.StatusNotFound, err.Error())
 		return
@@ -216,30 +222,40 @@ func (h *GameHandler) DeleteReview(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DeleteGame handles deleting a game entirely (Admin only)
-func (h *GameHandler) DeleteGame(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
+// ToggleReaction handles toggling an emoji reaction on a review
+func (h *GameHandler) ToggleReaction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		RespondError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 
 	idStr := r.PathValue("id")
-	if idStr == "" {
-		idStr = r.URL.Query().Get("id")
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
-		RespondError(w, http.StatusBadRequest, "invalid game ID")
+	reviewID, err := strconv.Atoi(idStr)
+	if err != nil || reviewID <= 0 {
+		RespondError(w, http.StatusBadRequest, "invalid review ID")
 		return
 	}
 
-	if err := h.gameService.DeleteGame(id); err != nil {
-		RespondError(w, http.StatusInternalServerError, err.Error())
+	user := middleware.GetUserFromContext(r.Context())
+	if user == nil {
+		RespondError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req struct {
+		Emoji string `json:"emoji"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Emoji == "" {
+		RespondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.gameService.ToggleReaction(reviewID, user.ID, req.Emoji); err != nil {
+		RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	RespondJSON(w, http.StatusOK, map[string]string{
-		"message": "game deleted successfully",
+		"message": "reaction toggled successfully",
 	})
 }

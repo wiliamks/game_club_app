@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import ALL_EMOJIS from '../emojis.json';
 import { 
   Star, 
   Award, 
@@ -14,7 +15,9 @@ import {
   ArrowUp,
   ArrowDown,
   Trash2,
-  ChevronLeft
+  ChevronLeft,
+  Smile,
+  Plus
 } from 'lucide-react';
 
 interface Game {
@@ -32,6 +35,13 @@ interface Game {
   time_to_beat_completely: string;
 }
 
+interface EmojiReactionSummary {
+  emoji: string;
+  count: number;
+  user_reacted: boolean;
+  usernames?: string[];
+}
+
 interface Review {
   id: number;
   game_id: number;
@@ -46,6 +56,7 @@ interface Review {
   fun: number;
   comment: string;
   created_at: string;
+  reactions?: EmojiReactionSummary[];
 }
 
 interface ReviewAverages {
@@ -88,6 +99,17 @@ export const GamesView: React.FC = () => {
   const [reviewSuccess, setReviewSuccess] = useState('');
   const [inspectedReview, setInspectedReview] = useState<Review | null>(null);
   const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
+  const [activePickerId, setActivePickerId] = useState<number | null>(null);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [recentEmojis, setRecentEmojis] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('recent_emojis');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Fetch games list
   const loadGames = async () => {
@@ -128,6 +150,16 @@ export const GamesView: React.FC = () => {
 
   useEffect(() => {
     loadGames();
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setActivePickerId(null);
+    };
+    document.addEventListener('click', handleGlobalClick);
+    return () => {
+      document.removeEventListener('click', handleGlobalClick);
+    };
   }, []);
 
   // Fetch selected game details & reviews
@@ -217,13 +249,38 @@ export const GamesView: React.FC = () => {
       await apiFetch(url, { method: 'DELETE' });
       setReviewSuccess(t('games.reviewDeleted'));
       setInspectedReview(null);
-
+      // Reload
       const updatedDetails = await apiFetch(`/games/${selectedGameId}`);
       setDetails(updatedDetails);
     } catch (err: any) {
       setReviewError(err.message || 'Failed to delete review');
     }
   };
+
+  const updateRecentEmoji = (emoji: string) => {
+    setRecentEmojis((prev) => {
+      const updated = [emoji, ...prev.filter((e) => e !== emoji)].slice(0, 10);
+      localStorage.setItem('recent_emojis', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleReactionToggle = async (reviewId: number, emoji: string) => {
+    if (selectedGameId === null) return;
+    try {
+      await apiFetch(`/reviews/${reviewId}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ emoji }),
+      });
+      updateRecentEmoji(emoji);
+      // Re-fetch to sync
+      const updatedDetails = await apiFetch(`/games/${selectedGameId}`);
+      setDetails(updatedDetails);
+    } catch (err: any) {
+      console.error('Failed to toggle reaction:', err);
+    }
+  };
+
 
   const handleDeleteGame = async () => {
     if (selectedGameId === null || !details) return;
@@ -676,7 +733,7 @@ export const GamesView: React.FC = () => {
                         <div 
                           key={r.id} 
                           onClick={() => setInspectedReview(r)}
-                          className="border border-slate-100 dark:border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-400 transition cursor-pointer active:scale-[0.98] transform flex flex-col justify-between"
+                          className="border border-slate-100 dark:border-slate-800 rounded-2xl p-5 space-y-3 shadow-sm hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-400 transition cursor-pointer active:scale-[0.98] transform flex flex-col justify-between group"
                         >
                           <div className="flex items-start justify-between space-x-3">
                             <div className="flex items-center space-x-3 min-w-0">
@@ -708,9 +765,140 @@ export const GamesView: React.FC = () => {
                           {r.comment && (
                             <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-10 leading-relaxed italic">{r.comment}</p>
                           )}
-                          <div className="text-[10px] text-slate-400 font-semibold mt-1">
-                            {new Date(r.created_at).toLocaleDateString()}
+                          <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400 font-semibold h-6">
+                            <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivePickerId(activePickerId === r.id ? null : r.id);
+                                  setIsSearchMode(false);
+                                  setSearchQuery('');
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition focus:opacity-100"
+                                title="React with emoji"
+                              >
+                                <Smile className="w-3.5 h-3.5" />
+                              </button>
+                              
+                              {/* Swapping Selector Popover */}
+                              {activePickerId === r.id && (
+                                <div 
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute right-0 bottom-full mb-1.5 z-40 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl transition-all"
+                                >
+                                  {!isSearchMode ? (
+                                    <div className="flex items-center space-x-1.5">
+                                      {/* The 2 horizontal rows of 5 */}
+                                      <div className="flex flex-col gap-1">
+                                        {/* Row 1: Defaults */}
+                                        <div className="flex items-center space-x-1">
+                                          {['👍', '❤️', '😂', '😮', '😢'].map((emoji) => (
+                                            <button
+                                              key={emoji}
+                                              onClick={() => {
+                                                handleReactionToggle(r.id, emoji);
+                                                setActivePickerId(null);
+                                              }}
+                                              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition active:scale-90"
+                                            >
+                                              {emoji}
+                                            </button>
+                                          ))}
+                                        </div>
+                                        {/* Row 2: Recents */}
+                                        <div className="flex items-center space-x-1 min-h-[28px]">
+                                          {(() => {
+                                            const defaultQuick = ['👍', '❤️', '😂', '😮', '😢'];
+                                            const recentToShow = recentEmojis.filter((e) => !defaultQuick.includes(e)).slice(0, 5);
+                                            return recentToShow.map((emoji) => (
+                                              <button
+                                                key={emoji}
+                                                onClick={() => {
+                                                  handleReactionToggle(r.id, emoji);
+                                                  setActivePickerId(null);
+                                                }}
+                                                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition active:scale-90"
+                                              >
+                                                {emoji}
+                                              </button>
+                                            ));
+                                          })()}
+                                        </div>
+                                      </div>
+                                      {/* Centered Plus Button on the right of the rows */}
+                                      <button
+                                        onClick={() => setIsSearchMode(true)}
+                                        className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition active:scale-90 h-10 w-8 flex items-center justify-center border border-slate-150 dark:border-slate-800"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="w-48">
+                                      <div className="flex items-center space-x-1.5 border border-slate-150 dark:border-slate-800 rounded-lg px-2 py-1 mb-2 bg-slate-50 dark:bg-slate-950/40">
+                                        <Search className="w-3 h-3 text-slate-400" />
+                                        <input
+                                          type="text"
+                                          placeholder="Search..."
+                                          value={searchQuery}
+                                          onChange={(e) => setSearchQuery(e.target.value)}
+                                          className="w-full bg-transparent border-none text-[10px] focus:ring-0 focus:outline-none text-slate-700 dark:text-slate-300"
+                                          autoFocus
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-6 gap-1 max-h-24 overflow-y-auto">
+                                        {(() => {
+                                          const defaultQuick = ['👍', '❤️', '😂', '😮', '😢'];
+                                          const recentList = recentEmojis.filter((e) => !defaultQuick.includes(e));
+                                          const orderedEmojis = [
+                                            ...ALL_EMOJIS.filter((x) => defaultQuick.includes(x.char)),
+                                            ...ALL_EMOJIS.filter((x) => recentList.includes(x.char)),
+                                            ...ALL_EMOJIS.filter((x) => !defaultQuick.includes(x.char) && !recentList.includes(x.char)),
+                                          ];
+                                          return orderedEmojis.filter((x) =>
+                                            searchQuery === '' || x.name.toLowerCase().includes(searchQuery.toLowerCase())
+                                          ).map((x) => (
+                                            <button
+                                              key={x.char}
+                                              onClick={() => {
+                                                handleReactionToggle(r.id, x.char);
+                                                setActivePickerId(null);
+                                              }}
+                                              className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition"
+                                            >
+                                              {x.char}
+                                            </button>
+                                          ));
+                                        })()}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          
+                          {/* Emoji Reactions Row (Only visible if reactions exist and count > 0) */}
+                          {r.reactions && r.reactions.some((rx) => rx.count > 0) && (
+                            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-50 dark:border-slate-800/40" onClick={(e) => e.stopPropagation()}>
+                              {r.reactions.filter((rx) => rx.count > 0).map((rx) => (
+                                <button
+                                  key={rx.emoji}
+                                  onClick={() => handleReactionToggle(r.id, rx.emoji)}
+                                  className={`flex items-center space-x-1 px-2 py-0.5 rounded-full text-sm font-semibold border transition active:scale-95 ${
+                                    rx.user_reacted
+                                      ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 font-bold'
+                                      : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/20 dark:hover:bg-slate-950/40 border-slate-150 dark:border-slate-800 text-slate-500 dark:text-slate-400'
+                                  }`}
+                                  title={rx.usernames && rx.usernames.length > 0 ? rx.usernames.join(', ') : ''}
+                                >
+                                  <span>{rx.emoji}</span>
+                                  <span>{rx.count}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       );
                     };

@@ -54,6 +54,7 @@ func main() {
 	mux.HandleFunc("GET /api/games/{id}", middleware.AuthRequired(gameHandler.GetGameDetails))
 	mux.HandleFunc("POST /api/games/{id}/reviews", middleware.AuthRequired(gameHandler.SubmitReview))
 	mux.HandleFunc("DELETE /api/games/{id}/reviews", middleware.AuthRequired(gameHandler.DeleteReview))
+	mux.HandleFunc("POST /api/reviews/{id}/react", middleware.AuthRequired(gameHandler.ToggleReaction))
 	mux.HandleFunc("GET /api/igdb/search", middleware.AuthRequired(gameHandler.SearchIGDB))
 
 	// --- Voting / Ranking choice System ---
@@ -75,7 +76,6 @@ func main() {
 	// Active Game control
 	mux.HandleFunc("POST /api/admin/active-game", middleware.AuthRequired(middleware.AdminRequired(gameHandler.SetActiveGame)))
 	mux.HandleFunc("DELETE /api/admin/active-game", middleware.AuthRequired(middleware.AdminRequired(gameHandler.DeactivateActiveGame)))
-	mux.HandleFunc("DELETE /api/admin/games/{id}", middleware.AuthRequired(middleware.AdminRequired(gameHandler.DeleteGame)))
 
 	// Voting Event session control
 	mux.HandleFunc("POST /api/admin/voting/session", middleware.AuthRequired(middleware.AdminRequired(votingHandler.CreateSession)))

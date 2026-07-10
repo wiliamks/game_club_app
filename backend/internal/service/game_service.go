@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"gamer-club/backend/internal/models"
 	"gamer-club/backend/internal/repository"
@@ -12,12 +13,13 @@ import (
 // GameService defines the business logic interface for games and reviews
 type GameService interface {
 	ListGames() ([]*models.Game, error)
-	GetGameDetails(gameID int) (*models.GameDetailsDTO, error)
+	GetGameDetails(gameID int, userID int) (*models.GameDetailsDTO, error)
 	SubmitReview(userID int, username string, gameID int, r *models.Review) error
 	SetActiveGame(gameID int) error
 	DeactivateActiveGame() error
 	DeleteReview(userID, gameID int) error
 	DeleteGame(id int) error
+	ToggleReaction(reviewID, userID int, emoji string) error
 }
 
 type gameService struct {
@@ -50,7 +52,15 @@ func (s *gameService) ListGames() ([]*models.Game, error) {
 	return games, nil
 }
 
-func (s *gameService) GetGameDetails(gameID int) (*models.GameDetailsDTO, error) {
+func (s *gameService) ToggleReaction(reviewID, userID int, emoji string) error {
+	runeCount := utf8.RuneCountInString(emoji)
+	if runeCount == 0 || runeCount > 4 {
+		return errors.New("invalid or unsupported emoji reaction length")
+	}
+	return s.repo.ToggleReaction(reviewID, userID, emoji)
+}
+
+func (s *gameService) GetGameDetails(gameID int, userID int) (*models.GameDetailsDTO, error) {
 	// 1. Check if game exists in local DB
 	g, err := s.repo.GetGameByID(gameID)
 	if err != nil {
@@ -73,6 +83,14 @@ func (s *gameService) GetGameDetails(gameID int) (*models.GameDetailsDTO, error)
 	reviews, err := s.repo.GetReviewsByGameID(gameID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve reviews: %w", err)
+	}
+
+	// Fetch reactions for this game
+	reactions, err := s.repo.GetReactionsForGame(gameID, userID)
+	if err == nil {
+		for _, r := range reviews {
+			r.Reactions = reactions[r.ID]
+		}
 	}
 
 	// 3. Calculate averages, excluding 0-scores per category

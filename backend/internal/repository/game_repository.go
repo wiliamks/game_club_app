@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"gamer-club/backend/internal/models"
@@ -22,6 +23,8 @@ type GameRepository interface {
 	GetReviewByUserAndGame(userID, gameID int) (*models.Review, error)
 	DeleteReview(userID, gameID int) error
 	DeleteGame(id int) error
+	ToggleReaction(reviewID, userID int, emoji string) error
+	GetReactionsForGame(gameID, userID int) (map[int][]*models.EmojiReactionSummary, error)
 }
 
 type gameRepository struct {
@@ -293,4 +296,69 @@ func (r *gameRepository) DeleteGame(id int) error {
 		return fmt.Errorf("failed to delete game: %w", err)
 	}
 	return nil
+}
+
+func (r *gameRepository) ToggleReaction(reviewID, userID int, emoji string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var exists bool
+	err = tx.QueryRow("SELECT 1 FROM review_reactions WHERE review_id = ? AND user_id = ? AND emoji = ?", reviewID, userID, emoji).Scan(&exists)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+
+	if exists {
+		_, err = tx.Exec("DELETE FROM review_reactions WHERE review_id = ? AND user_id = ? AND emoji = ?", reviewID, userID, emoji)
+	} else {
+		_, err = tx.Exec("INSERT INTO review_reactions (review_id, user_id, emoji) VALUES (?, ?, ?)", reviewID, userID, emoji)
+	}
+
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (r *gameRepository) GetReactionsForGame(gameID, userID int) (map[int][]*models.EmojiReactionSummary, error) {
+	query := `SELECT 
+    rr.review_id, 
+    rr.emoji, 
+    COUNT(rr.user_id) AS count,
+    MAX(CASE WHEN rr.user_id = ? THEN 1 ELSE 0 END) AS user_reacted,
+    GROUP_CONCAT(u.username, ', ') AS usernames
+FROM review_reactions rr
+JOIN reviews r ON rr.review_id = r.id
+JOIN users u ON rr.user_id = u.id
+WHERE r.game_id = ?
+GROUP BY rr.review_id, rr.emoji;`
+
+	rows, err := r.db.Query(query, userID, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	reactions := make(map[int][]*models.EmojiReactionSummary)
+	for rows.Next() {
+		var reviewID int
+		summary := &models.EmojiReactionSummary{}
+		var userReactedInt int
+		var usernamesStr sql.NullString
+		err := rows.Scan(&reviewID, &summary.Emoji, &summary.Count, &userReactedInt, &usernamesStr)
+		if err != nil {
+			return nil, err
+		}
+		summary.UserReacted = userReactedInt == 1
+		if usernamesStr.Valid && usernamesStr.String != "" {
+			summary.Usernames = strings.Split(usernamesStr.String, ", ")
+		} else {
+			summary.Usernames = []string{}
+		}
+		reactions[reviewID] = append(reactions[reviewID], summary)
+	}
+	return reactions, nil
 }
