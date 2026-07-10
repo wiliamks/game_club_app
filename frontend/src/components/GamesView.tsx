@@ -16,8 +16,7 @@ import {
   ArrowDown,
   Trash2,
   ChevronLeft,
-  Smile,
-  Plus
+  Smile
 } from 'lucide-react';
 
 interface Game {
@@ -100,7 +99,6 @@ export const GamesView: React.FC = () => {
   const [inspectedReview, setInspectedReview] = useState<Review | null>(null);
   const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
   const [activePickerId, setActivePickerId] = useState<number | null>(null);
-  const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [recentEmojis, setRecentEmojis] = useState<string[]>(() => {
     try {
@@ -765,115 +763,84 @@ export const GamesView: React.FC = () => {
                           {r.comment && (
                             <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-10 leading-relaxed italic">{r.comment}</p>
                           )}
-                          <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400 font-semibold h-6">
-                            <span>{new Date(r.created_at).toLocaleDateString()}</span>
-                            <div className="relative">
+                          <div className="flex items-center justify-between mt-3 group/picker h-6">
+                            <span className="text-[10px] text-slate-400 font-semibold">{new Date(r.created_at).toLocaleDateString()}</span>
+                            
+                            <div className="relative flex items-center" onClick={(e) => e.stopPropagation()}>
+                              
+                              {/* Emojis Shortcut Row (Hidden by default, slides out horizontally to the left on hover - hides if search picker is active) */}
+                              {activePickerId !== r.id && (
+                                <div className="hidden group-hover/picker:flex items-center space-x-1.5 mr-1.5 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-150 dark:border-slate-800 transition-all duration-200">
+                                  {(() => {
+                                    const defaultQuick = ['👍', '❤️', '😂', '😮', '😢'];
+                                    const recentToShow = recentEmojis.filter((e) => !defaultQuick.includes(e)).slice(0, 2);
+                                    const quickRow = [...defaultQuick, ...recentToShow];
+                                    
+                                    return quickRow.map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => handleReactionToggle(r.id, emoji)}
+                                        className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition active:scale-90"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ));
+                                  })()}
+                                </div>
+                              )}
+
+                              {/* Smile Trigger Button */}
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={() => {
                                   setActivePickerId(activePickerId === r.id ? null : r.id);
-                                  setIsSearchMode(false);
                                   setSearchQuery('');
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition focus:opacity-100"
-                                title="React with emoji"
+                                title="Search all emojis"
                               >
                                 <Smile className="w-3.5 h-3.5" />
                               </button>
-                              
-                              {/* Swapping Selector Popover */}
+                              {/* Full Search Popover */}
                               {activePickerId === r.id && (
                                 <div 
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="absolute right-0 bottom-full mb-1.5 z-40 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl transition-all"
+                                  className="absolute right-full mr-1.5 -bottom-1.5 z-40 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl transition-all w-48"
                                 >
-                                  {!isSearchMode ? (
-                                    <div className="flex items-center space-x-1.5">
-                                      {/* The 2 horizontal rows of 5 */}
-                                      <div className="flex flex-col gap-1">
-                                        {/* Row 1: Defaults */}
-                                        <div className="flex items-center space-x-1">
-                                          {['👍', '❤️', '😂', '😮', '😢'].map((emoji) => (
-                                            <button
-                                              key={emoji}
-                                              onClick={() => {
-                                                handleReactionToggle(r.id, emoji);
-                                                setActivePickerId(null);
-                                              }}
-                                              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition active:scale-90"
-                                            >
-                                              {emoji}
-                                            </button>
-                                          ))}
-                                        </div>
-                                        {/* Row 2: Recents */}
-                                        <div className="flex items-center space-x-1 min-h-[28px]">
-                                          {(() => {
-                                            const defaultQuick = ['👍', '❤️', '😂', '😮', '😢'];
-                                            const recentToShow = recentEmojis.filter((e) => !defaultQuick.includes(e)).slice(0, 5);
-                                            return recentToShow.map((emoji) => (
-                                              <button
-                                                key={emoji}
-                                                onClick={() => {
-                                                  handleReactionToggle(r.id, emoji);
-                                                  setActivePickerId(null);
-                                                }}
-                                                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition active:scale-90"
-                                              >
-                                                {emoji}
-                                              </button>
-                                            ));
-                                          })()}
-                                        </div>
-                                      </div>
-                                      {/* Centered Plus Button on the right of the rows */}
-                                      <button
-                                        onClick={() => setIsSearchMode(true)}
-                                        className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition active:scale-90 h-10 w-8 flex items-center justify-center border border-slate-150 dark:border-slate-800"
-                                      >
-                                        <Plus className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="w-48">
-                                      <div className="flex items-center space-x-1.5 border border-slate-150 dark:border-slate-800 rounded-lg px-2 py-1 mb-2 bg-slate-50 dark:bg-slate-950/40">
-                                        <Search className="w-3 h-3 text-slate-400" />
-                                        <input
-                                          type="text"
-                                          placeholder="Search..."
-                                          value={searchQuery}
-                                          onChange={(e) => setSearchQuery(e.target.value)}
-                                          className="w-full bg-transparent border-none text-[10px] focus:ring-0 focus:outline-none text-slate-700 dark:text-slate-300"
-                                          autoFocus
-                                        />
-                                      </div>
-                                      <div className="grid grid-cols-6 gap-1 max-h-24 overflow-y-auto">
-                                        {(() => {
-                                          const defaultQuick = ['👍', '❤️', '😂', '😮', '😢'];
-                                          const recentList = recentEmojis.filter((e) => !defaultQuick.includes(e));
-                                          const orderedEmojis = [
-                                            ...ALL_EMOJIS.filter((x) => defaultQuick.includes(x.char)),
-                                            ...ALL_EMOJIS.filter((x) => recentList.includes(x.char)),
-                                            ...ALL_EMOJIS.filter((x) => !defaultQuick.includes(x.char) && !recentList.includes(x.char)),
-                                          ];
-                                          return orderedEmojis.filter((x) =>
-                                            searchQuery === '' || x.name.toLowerCase().includes(searchQuery.toLowerCase())
-                                          ).map((x) => (
-                                            <button
-                                              key={x.char}
-                                              onClick={() => {
-                                                handleReactionToggle(r.id, x.char);
-                                                setActivePickerId(null);
-                                              }}
-                                              className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition"
-                                            >
-                                              {x.char}
-                                            </button>
-                                          ));
-                                        })()}
-                                      </div>
-                                    </div>
-                                  )}
+                                  <div className="flex items-center space-x-1.5 border border-slate-150 dark:border-slate-800 rounded-lg px-2 py-1 mb-2 bg-slate-50 dark:bg-slate-950/40">
+                                    <Search className="w-3 h-3 text-slate-400" />
+                                    <input
+                                      type="text"
+                                      placeholder="Search..."
+                                      value={searchQuery}
+                                      onChange={(e) => setSearchQuery(e.target.value)}
+                                      className="w-full bg-transparent border-none text-[10px] focus:ring-0 focus:outline-none text-slate-700 dark:text-slate-300"
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div className="grid grid-cols-6 gap-1 max-h-24 overflow-y-auto">
+                                    {(() => {
+                                      const defaultQuick = ['👍', '❤️', '😂', '😮', '😢'];
+                                      const recentList = recentEmojis.filter((e) => !defaultQuick.includes(e));
+                                      const orderedEmojis = [
+                                        ...ALL_EMOJIS.filter((x) => defaultQuick.includes(x.char)),
+                                        ...ALL_EMOJIS.filter((x) => recentList.includes(x.char)),
+                                        ...ALL_EMOJIS.filter((x) => !defaultQuick.includes(x.char) && !recentList.includes(x.char)),
+                                      ];
+                                      return orderedEmojis.filter((x) =>
+                                        searchQuery === '' || x.name.toLowerCase().includes(searchQuery.toLowerCase())
+                                      ).map((x) => (
+                                        <button
+                                          key={x.char}
+                                          onClick={() => {
+                                            handleReactionToggle(r.id, x.char);
+                                            setActivePickerId(null);
+                                          }}
+                                          className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-sm transition"
+                                        >
+                                          {x.char}
+                                        </button>
+                                      ));
+                                    })()}
+                                  </div>
                                 </div>
                               )}
                             </div>
